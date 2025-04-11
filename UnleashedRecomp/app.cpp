@@ -1,6 +1,6 @@
 #include "app.h"
 #include "kernel/memory.h"
-// #include <api/SWA.h>
+// #include <api/Marathon.h>
 #include <gpu/video.h>
 #include <cstdio>
 #include <install/installer.h>

@@ -313,26 +313,14 @@ std::unordered_map<std::string_view, std::unordered_map<ELanguage, std::string>>
     },
     {
         // Japanese Notes: This localization should include furigana.
-        "Installer_Page_SelectGameAndUpdate",
+        "Installer_Page_SelectGame",
         {
-            { ELanguage::English,  "Add the sources for the game and its title update." },
+            { ELanguage::English,  "Add the sources for the game." },
             { ELanguage::Japanese, "ゲームのソースとタイトルアップデート\nを[追加:ついか]" },
             { ELanguage::German,   "Füge die Quellen für das Spiel und dessen Update hinzu." },
             { ELanguage::French,   "Ajouter les fichiers du jeu ainsi que ses mises à jour." },
             { ELanguage::Spanish,  "Añade las fuentes para el juego y su actualización." },
             { ELanguage::Italian,  "Aggiungi le fonti per il gioco e per il suo file d'aggiornamento." }
-        }
-    },
-    {
-        // Japanese Notes: This localization should include furigana.
-        "Installer_Page_SelectDLC",
-        {
-            { ELanguage::English,  "Add the sources for the DLC." },
-            { ELanguage::Japanese, "DLCのソースを[追加:ついか]" },
-            { ELanguage::German,   "Füge die Quellen für die Erweiterungen des Spiels hinzu." },
-            { ELanguage::French,   "Ajouter les fichiers pour les DLCs." },
-            { ELanguage::Spanish,  "Añade las fuentes para el DLC." },
-            { ELanguage::Italian,  "Aggiungi le fonti per i DLC." }
         }
     },
     {
@@ -395,17 +383,6 @@ std::unordered_map<std::string_view, std::unordered_map<ELanguage, std::string>>
         }
     },
     {
-        "Installer_Step_Update",
-        {
-            { ELanguage::English,  "UPDATE" },
-            { ELanguage::Japanese, "アップデート" },
-            { ELanguage::German,   "UPDATE" },
-            { ELanguage::French,   "MISE À JOUR" },
-            { ELanguage::Spanish,  "ACTUALIZACIÓN" },
-            { ELanguage::Italian,  "AGGIORNAMENTO" }
-        }
-    },
-    {
         // Japanese Notes: This localization should include furigana.
         "Installer_Step_RequiredSpace",
         {
@@ -438,17 +415,6 @@ std::unordered_map<std::string_view, std::unordered_map<ELanguage, std::string>>
             { ELanguage::French,   "SUIVANT" },
             { ELanguage::Spanish,  "SIGUIENTE" },
             { ELanguage::Italian,  "CONTINUA" }
-        }
-    },
-    {
-        "Installer_Button_Skip",
-        {
-            { ELanguage::English,  "SKIP" },
-            { ELanguage::Japanese, "スキップ" },
-            { ELanguage::German,   "ÜBERSPRINGEN" },
-            { ELanguage::French,   "IGNORER" },
-            { ELanguage::Spanish,  "SALTAR" },
-            { ELanguage::Italian,  "SALTA" }
         }
     },
     {
@@ -547,32 +513,6 @@ std::unordered_map<std::string_view, std::unordered_map<ELanguage, std::string>>
             { ELanguage::French,   "Les fichiers du jeu et la mise à\njour sont incompatibles.\n\nVeuillez vous assurer que les\nfichiers sont pour la même\nversion/région puis réessayez." },
             { ELanguage::Spanish,  "El juego seleccionado\ny su actualización son incompatibles.\n\nPor favor, asegúrate de que que los archivos\nson de la misma versión y\nregión e inténtalo de nuevo." },
             { ELanguage::Italian,  "I file del gioco\ne dell'aggiornamento sono incompatibili.\n\nAssicurati che i file sono\ndella stessa versione\ne regione e riprova." }
-        }
-    },
-    {
-        // Notes: message appears when clicking Skip at the DLC step.
-        // Japanese Notes: This localization should include furigana.
-        "Installer_Message_DLCWarning",
-        {
-            { ELanguage::English,  "It is highly recommended\nthat you install all of the\nDLC, as it includes high\nquality lighting textures\nfor the base game.\n\nAre you sure you want to\nskip this step?" },
-            { ELanguage::Japanese, "ベースゲーム[用:よう]の[高品質:こうひんしつ]の\n[照明:しょうめい]テクスチャが[含:ふく]まれているため\nすべてのDLCをインストールすることを\n[強:つよ]くお[勧:すす]めします\n\nこの[手順:てじゅん]をスキップしてもよろしいですか？" },
-            { ELanguage::German,   "Es wird empgohlen alle Erweiterungen zu installieren, da sie Beleuchtungs-Texturen in einer höheren Qualität für das Basisspiel beinhalten.\n\nBist du dir sicher, dass du diesen Schritt überspringen möchtest?" },
-            { ELanguage::French,   "Il est fortement recommandé\nd'installer l'ensemble du\nDLC car elle inclut des\ntextures de lumière de\nhaute qualité pour le jeu\nde base.\n\nÊtes-vous sûr de vouloir\nignorer cette étape ?" },
-            { ELanguage::Spanish,  "Se recomienda encarecidamente\ninstalar todo el DLC, ya que\ncontiene texturas de iluminación\nde alta calidad para el juego base.\n\n¿Seguro que quieres saltar este paso?" },
-            { ELanguage::Italian,  "Si consiglia di installare\ntutti i DLC, poichè includono\ntexture di illuminazione di qualità migliore.\n\nSei sicuro di voler saltare?" }
-        }
-    },
-    {
-        // Notes: message appears when choosing the Install option at the title screen when the user is missing DLC content.
-        // Japanese Notes: This localization should include furigana.
-        "Installer_Message_TitleMissingDLC",
-        {
-            { ELanguage::English,  "This will restart the game to\nallow you to install any DLC\nthat you are missing.\n\nInstalling DLC will improve the\nlighting quality across the game.\n\nWould you like to install missing\ncontent?" },
-            { ELanguage::Japanese, "これによりゲームが[再起動:さいきどう]し[不足:ふそく]しているDLCを\nインストールできるようになります\n\nDLCをインストールすると\nゲーム[全体:ぜんたい]の [照明品質:しょうめいひんしつ] が[向上:こうじょう]します\n\n[不足:ふそく]しているコンテンツを\nインストールしますか？" },
-            { ELanguage::German,   "Das Spiel wird neu gestartet\num die Installation einer fehlenden\nErweiterung zu ermöglichen.\n\nDie Installation einer\nErweiterung erhöht die Qualität\nder Beleuchtung im gesamten Spiel.\n\nMöchtest du den fehlenden\nInhalt installieren?" },
-            { ELanguage::French,   "Cela redémarrera le jeu pour vous\npermettre d'installer les DLC\nmanquants.\n\nL'installation du DLC améliorera\nla qualité de l'éclairage dans le\njeu.\n\nSouhaitez-vous installer le\ncontenu manquant ?" },
-            { ELanguage::Spanish,  "Esta opción reiniciará el juego\npara permitirte instalar los DLC\nque falten.\n\nInstalar el DLC mejorará la calidad\nde iluminación en todo el juego.\n\n¿Quieres instalar el contenido\nque falta?" },
-            { ELanguage::Italian,  "Questa opzione riavviera il gioco\nper farti installare qualsiasi DLC\nche non hai installato.\n\nL'installazione dei DLC migliorerà la qualità\ndell'illuminazione del gioco.\n\nVuoi installare i DLC mancanti?" }
         }
     },
     {
