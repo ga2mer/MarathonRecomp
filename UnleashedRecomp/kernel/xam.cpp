@@ -316,10 +316,6 @@ uint32_t XamContentCreateEx(uint32_t dwUserIndex, const char* szRootName, const 
                 std::u8string savePathU8 = GetSavePath(true).u8string();
                 root = (const char *)(savePathU8.c_str());
             }
-            else if (pContentData->dwContentType == XCONTENTTYPE_DLC)
-            {
-                root = GAME_INSTALL_DIRECTORY "/dlc";
-            }
             else
             {
                 root = GAME_INSTALL_DIRECTORY;

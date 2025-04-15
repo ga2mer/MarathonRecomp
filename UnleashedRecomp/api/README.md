@@ -1,4 +1,4 @@
-# SWA
+# Marathon
 
 ## Contribution Guide
 

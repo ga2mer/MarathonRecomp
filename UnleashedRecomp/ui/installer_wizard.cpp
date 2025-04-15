@@ -103,9 +103,6 @@ static bool g_isQuitting = false;
 
 static std::filesystem::path g_installPath;
 static std::filesystem::path g_gameSourcePath;
-static std::filesystem::path g_updateSourcePath;
-static std::array<std::filesystem::path, int(DLC::Count)> g_dlcSourcePaths;
-static std::array<bool, int(DLC::Count)> g_dlcInstalled = {};
 static std::array<std::unique_ptr<GuestTexture>, 8> g_installTextures;
 static std::unique_ptr<GuestTexture> g_milesElectricIcon;
 static std::unique_ptr<GuestTexture> g_arrowCircle;
@@ -129,8 +126,7 @@ enum class WizardPage
 {
     SelectLanguage,
     Introduction,
-    SelectGameAndUpdate,
-    SelectDLC,
+    SelectGame,
     CheckSpace,
     Installing,
     InstallSucceeded,
@@ -353,8 +349,7 @@ static std::string& GetWizardText(WizardPage page)
     {
         case WizardPage::SelectLanguage: return Localise("Installer_Page_SelectLanguage");
         case WizardPage::Introduction: return Localise("Installer_Page_Introduction");
-        case WizardPage::SelectGameAndUpdate: return Localise("Installer_Page_SelectGameAndUpdate");
-        case WizardPage::SelectDLC: return Localise("Installer_Page_SelectDLC");
+        case WizardPage::SelectGame: return Localise("Installer_Page_SelectGame");
         case WizardPage::CheckSpace: return Localise("Installer_Page_CheckSpace");
         case WizardPage::Installing: return Localise("Installer_Page_Installing");
         case WizardPage::InstallSucceeded: return Localise("Installer_Page_InstallSucceeded");
@@ -396,22 +391,6 @@ const ELanguage LANGUAGE_ENUM[] =
     ELanguage::Italian,
     ELanguage::Japanese,
 };
-
-const char *DLC_SOURCE_TEXT[] =
-{
-    "SPAGONIA",
-    "CHUN-NAN",
-    "MAZURI",
-    "HOLOSKA",
-    "APOTOS & SHAMAR",
-    "EMPIRE CITY & ADABAT",
-};
-
-static int DLCIndex(DLC dlc)
-{
-    assert(dlc != DLC::Unknown);
-    return (int)(dlc) - 1;
-}
 
 static double ComputeMotionInstaller(double timeAppear, double timeDisappear, double offset, double total)
 {
@@ -1170,12 +1149,12 @@ static void PickerShow(bool folderMode)
 
 static bool ParseSourcePaths(std::list<std::filesystem::path> &paths)
 {
-    assert((g_currentPage == WizardPage::SelectGameAndUpdate) || (g_currentPage == WizardPage::SelectDLC));
+    assert(g_currentPage == WizardPage::SelectGame);
 
     constexpr size_t failedPathLimit = 5;
     bool isFailedPathsOverLimit = false;
     std::list<std::filesystem::path> failedPaths;
-    if (g_currentPage == WizardPage::SelectGameAndUpdate)
+    if (g_currentPage == WizardPage::SelectGame)
     {
         for (const std::filesystem::path &path : paths)
         {
@@ -1194,21 +1173,6 @@ static bool ParseSourcePaths(std::list<std::filesystem::path> &paths)
             else
             {
                 isFailedPathsOverLimit = true;
-            }
-        }
-    }
-    else if(g_currentPage == WizardPage::SelectDLC)
-    {
-        for (const std::filesystem::path &path : paths)
-        {
-            DLC dlc = Installer::parseDLC(path);
-            if (dlc != DLC::Unknown)
-            {
-                g_dlcSourcePaths[DLCIndex(dlc)] = path;
-            }
-            else if (failedPaths.size() < failedPathLimit)
-            {
-                failedPaths.push_back(path);
             }
         }
     }
@@ -1265,7 +1229,7 @@ static void DrawSourcePickers()
 {
     bool buttonPressed = false;
     std::list<std::filesystem::path> paths;
-    if (g_currentPage == WizardPage::SelectGameAndUpdate || g_currentPage == WizardPage::SelectDLC)
+    if (g_currentPage == WizardPage::SelectGame)
     {
         constexpr float ADD_BUTTON_MAX_TEXT_WIDTH = 168.0f;
         const std::string &addFilesText = Localise("Installer_Button_AddFiles");
@@ -1294,18 +1258,9 @@ static void DrawSourcePickers()
 
 static void DrawSources()
 {
-    if (g_currentPage == WizardPage::SelectGameAndUpdate)
+    if (g_currentPage == WizardPage::SelectGame)
     {
         DrawSourceButton(ButtonColumnLeft, 0, Localise("Installer_Step_Game").c_str(), !g_gameSourcePath.empty());
-        DrawSourceButton(ButtonColumnRight, 0, Localise("Installer_Step_Update").c_str(), !g_updateSourcePath.empty());
-    }
-
-    if (g_currentPage == WizardPage::SelectDLC)
-    {
-        for (int i = 0; i < 6; i++)
-        {
-            DrawSourceButton((i < 3) ? ButtonColumnLeft : ButtonColumnRight, float(i % 3), DLC_SOURCE_TEXT[i], !g_dlcSourcePaths[i].empty() || g_dlcInstalled[i]);
-        }
     }
 }
 
@@ -1374,15 +1329,6 @@ static bool InstallerParseSources(std::string &errorMessage)
 
     Installer::Input installerInput;
     installerInput.gameSource = g_gameSourcePath;
-    installerInput.updateSource = g_updateSourcePath;
-
-    for (std::filesystem::path &path : g_dlcSourcePaths)
-    {
-        if (!path.empty())
-        {
-            installerInput.dlcSources.push_back(path);
-        }
-    }
 
     bool sourcesParsed = Installer::parseSources(installerInput, g_installerJournal, g_installerSources);
     errorMessage = g_installerJournal.lastErrorMessage;
@@ -1398,25 +1344,15 @@ static void DrawNavigationButton()
     }
 
     bool nextButtonEnabled = !g_isDisappearing && (g_currentPage != WizardPage::Installing);
-    if (nextButtonEnabled && g_currentPage == WizardPage::SelectGameAndUpdate)
+    if (nextButtonEnabled && g_currentPage == WizardPage::SelectGame)
     {
         nextButtonEnabled = !g_gameSourcePath.empty() && !g_updateSourcePath.empty();
-    }
-
-    bool skipButton = false;
-    if (g_currentPage == WizardPage::SelectDLC)
-    {
-        skipButton = std::all_of(g_dlcSourcePaths.begin(), g_dlcSourcePaths.end(), [](const std::filesystem::path &path) { return path.empty(); });
     }
 
     float squashRatio;
     constexpr float NAV_BUTTON_MAX_TEXT_WIDTH = 90.0f;
     std::string_view nextButtonKey = "Installer_Button_Next";
-    if (skipButton)
-    {
-        nextButtonKey = "Installer_Button_Skip";
-    }
-    else if (g_currentPage == WizardPage::InstallFailed)
+    if (g_currentPage == WizardPage::InstallFailed)
     {
         nextButtonKey = "Installer_Button_Retry";
     }
@@ -1432,55 +1368,10 @@ static void DrawNavigationButton()
     if (buttonPressed)
     {
         XexPatcher::Result patcherResult;
-        if (g_currentPage == WizardPage::SelectGameAndUpdate && (patcherResult = Installer::checkGameUpdateCompatibility(g_gameSourcePath, g_updateSourcePath), patcherResult != XexPatcher::Result::Success))
+        if (g_currentPage == WizardPage::SelectGame && (patcherResult = Installer::checkGameUpdateCompatibility(g_gameSourcePath, g_updateSourcePath), patcherResult != XexPatcher::Result::Success))
         {
             g_currentMessagePrompt = Localise("Installer_Message_IncompatibleGameData");
             g_currentMessagePromptConfirmation = false;
-        }
-        else if (g_currentPage == WizardPage::SelectDLC)
-        {
-            // Check if any of the DLC was not specified.
-            bool dlcIncomplete = false;
-            for (int i = 0; (i < int(DLC::Count)) && !dlcIncomplete; i++)
-            {
-                if (g_dlcSourcePaths[i].empty() && !g_dlcInstalled[i])
-                {
-                    dlcIncomplete = true;
-                }
-            }
-
-            bool dlcInstallerMode = g_gameSourcePath.empty();
-            std::string sourcesErrorMessage;
-            if (!InstallerParseSources(sourcesErrorMessage))
-            {
-                // Some of the sources that were provided to the installer are not valid. Restart the file selection process.
-                std::stringstream stringStream;
-                stringStream << Localise("Installer_Message_InvalidFiles");
-                if (!sourcesErrorMessage.empty()) {
-                    stringStream << std::endl << std::endl << sourcesErrorMessage;
-                }
-
-                g_currentMessagePrompt = stringStream.str();
-                g_currentMessagePromptConfirmation = false;
-                g_currentPage = dlcInstallerMode ? WizardPage::SelectDLC : WizardPage::SelectGameAndUpdate;
-            }
-            else if (dlcIncomplete && !dlcInstallerMode)
-            {
-                // Not all the DLC was specified, we show a prompt and await a confirmation before starting the installer.
-                g_currentMessagePrompt = Localise("Installer_Message_DLCWarning");
-                g_currentMessagePromptSource = MessagePromptSource::Next;
-                g_currentMessagePromptConfirmation = true;
-            }
-            else if (skipButton && dlcInstallerMode)
-            {
-                // Nothing was selected and the installer was in DLC mode, just close it.
-                g_isDisappearing = true;
-                g_disappearTime = ImGui::GetTime();
-            }
-            else
-            {
-                g_currentPage = WizardPage::CheckSpace;
-            }
         }
         else if (g_currentPage == WizardPage::CheckSpace)
         {
@@ -1658,11 +1549,6 @@ static void DrawMessagePrompt()
                     g_disappearTime = ImGui::GetTime();
                 }
             }
-            else if (g_currentPage == WizardPage::SelectDLC)
-            {
-                // If user confirms the message prompt that they wish to skip installing the DLC, proceed to the next step.
-                g_currentPage = WizardPage::CheckSpace;
-            }
         }
 
         if (g_currentMessagePromptSource == MessagePromptSource::Back)
@@ -1823,8 +1709,6 @@ void InstallerWizard::Shutdown()
 
     // Erase the sources.
     g_installerSources.game.reset();
-    g_installerSources.update.reset();
-    g_installerSources.dlc.clear();
     
     // Make sure the GPU is not currently active before deleting these textures.
     Video::WaitForGPU();
@@ -1840,7 +1724,7 @@ void InstallerWizard::Shutdown()
     }
 }
 
-bool InstallerWizard::Run(std::filesystem::path installPath, bool skipGame)
+bool InstallerWizard::Run(std::filesystem::path installPath)
 {
     g_installPath = installPath;
 
@@ -1850,17 +1734,6 @@ bool InstallerWizard::Run(std::filesystem::path installPath, bool skipGame)
     // Guarantee one controller is initialized. We'll rely on SDL's event loop to get the controller events.
     XAMINPUT_STATE inputState;
     hid::GetState(0, &inputState);
-
-    if (skipGame)
-    {
-        for (int i = 0; i < int(DLC::Count); i++)
-        {
-            g_dlcInstalled[i] = Installer::checkDLCInstall(g_installPath, DLC(i + 1));
-        }
-
-        g_firstPage = WizardPage::SelectDLC;
-        g_currentPage = g_firstPage;
-    }
 
     GameWindow::SetFullscreenCursorVisibility(true);
     s_isVisible = true;
