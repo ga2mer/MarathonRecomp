@@ -1,4 +1,4 @@
-// #include <api/SWA.h>
+// #include <api/Marathon.h>
 #include <apu/embedded_player.h>
 #include <cpu/guest_stack_var.h>
 #include <kernel/function.h>

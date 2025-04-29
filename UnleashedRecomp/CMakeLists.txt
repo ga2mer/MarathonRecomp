@@ -130,22 +130,6 @@ set(UNLEASHED_RECOMP_HID_CXX_SOURCES
 )
 
 set(UNLEASHED_RECOMP_PATCHES_CXX_SOURCES
-    "patches/aspect_ratio_patches.cpp"
-    "patches/audio_patches.cpp"
-    "patches/camera_patches.cpp"
-    "patches/CGameModeStageTitle_patches.cpp"
-    "patches/CHudPause_patches.cpp"
-    "patches/CTitleStateIntro_patches.cpp"
-    "patches/CTitleStateMenu_patches.cpp"
-    "patches/fps_patches.cpp"
-    "patches/frontend_listener.cpp"
-    "patches/input_patches.cpp"
-    "patches/inspire_patches.cpp"
-    "patches/misc_patches.cpp"
-    "patches/object_patches.cpp"
-    "patches/player_patches.cpp"
-    "patches/resident_patches.cpp"
-    "patches/video_patches.cpp"
 )
 
 set(UNLEASHED_RECOMP_UI_CXX_SOURCES
@@ -168,14 +152,7 @@ set(UNLEASHED_RECOMP_INSTALL_CXX_SOURCES
     "install/iso_file_system.cpp"
     "install/update_checker.cpp"
     "install/xcontent_file_system.cpp"
-    "install/hashes/apotos_shamar.cpp"
-    "install/hashes/chunnan.cpp"
-    "install/hashes/empire_city_adabat.cpp"
     "install/hashes/game.cpp"
-    "install/hashes/holoska.cpp"
-    "install/hashes/mazuri.cpp"
-    "install/hashes/spagonia.cpp"
-    "install/hashes/update.cpp"
 )
 
 set(UNLEASHED_RECOMP_USER_CXX_SOURCES
@@ -470,7 +447,7 @@ endfunction()
 
 generate_aggregate_header(
     "${CMAKE_CURRENT_SOURCE_DIR}/api"
-    "${CMAKE_CURRENT_SOURCE_DIR}/api/SWA.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/api/Marathon.h"
 )
 
 set(RESOURCES_SOURCE_PATH "${PROJECT_SOURCE_DIR}/../UnleashedRecompResources")

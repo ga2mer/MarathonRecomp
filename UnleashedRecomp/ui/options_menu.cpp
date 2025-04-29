@@ -2,7 +2,7 @@
 #include "options_menu_thumbnails.h"
 #include "tv_static.h"
 
-#include <api/SWA.h>
+#include <api/Marathon.h>
 #include <apu/audio.h>
 #include <gpu/imgui/imgui_common.h>
 #include <gpu/video.h>
