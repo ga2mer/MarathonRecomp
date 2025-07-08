@@ -6,6 +6,7 @@
 #include <kernel/heap.h>
 #include <condition_variable>
 
+#ifndef _WIN32
 extern "C" {
     #include <libavcodec/avcodec.h>
     #include <libavformat/avformat.h>
@@ -13,6 +14,7 @@ extern "C" {
     #include <libavutil/opt.h>
     #include <libswresample/swresample.h>
 }
+#endif
 
 #define MARATHON_RECOMP_DEBUG_XMA_DECODER
 
@@ -21,13 +23,6 @@ extern "C" {
 #else
 #define debug_printf(...)
 #endif
-
-struct XMAPLAYBACKINIT {
-    be<uint32_t> sampleRate;
-    be<uint32_t> outputBufferSize;
-    uint8_t channelCount;
-    uint8_t subframes;
-};
 
 constexpr uint32_t kBytesPerPacket = 2048;
 constexpr uint32_t kBytesPerPacketHeader = 4;
@@ -43,6 +38,22 @@ constexpr uint32_t kMaxFrameLength = 0x7FFF;
 constexpr uint32_t kBitsPerFrameHeader = 15;
 constexpr uint32_t kMaxFrameSizeinBits = 0x4000 - kBitsPerPacketHeader;
 
+struct XmaPlaybackInit {
+    be<uint32_t> sampleRate;
+    be<uint32_t> outputBufferSize;
+    uint8_t channelCount;
+    uint8_t subframes;
+};
+
+struct XmaPlaybackLoop {
+    be<uint32_t> loopStartOffset;
+    be<uint32_t> loopEndOffset;
+    uint8_t loopSubframeEnd;
+    uint8_t loopSubframeSkip;
+    uint8_t numLoops;
+    uint8_t reserved;
+};
+
 class XmaPlayback {
 public:
     uint32_t sampleRate;
@@ -57,11 +68,13 @@ public:
 
     bool bAllowedToDecode = false;
 
+#ifndef _WIN32
     // ffmpeg
     AVCodecContext *codec_ctx = nullptr;
     const AVCodec *codec = nullptr;
     AVPacket *av_packet_ = nullptr;
     AVFrame *av_frame_ = nullptr;
+#endif
 
     // xenia
     std::array<uint8_t, kBytesPerPacketData * 2> inputBuffer;
@@ -81,7 +94,6 @@ public:
     uint32_t inputBuffer2 = 0;
     size_t inputBuffer1Size = 0;
     size_t inputBuffer2Size = 0;
-    uint32_t validInputBuffer = 0;
     uint32_t inputBuffer1Valid = 0;
     uint32_t inputBuffer2Valid = 0;
     uint32_t currentBuffer = 0;
@@ -100,35 +112,7 @@ public:
     std::atomic<bool> isLocked { false };
     std::atomic<bool> isRunning { true };
 
-    XmaPlayback(uint32_t sampleRate, uint32_t outputBufferSize, uint32_t channelCount, uint32_t subframes)
-    : sampleRate(sampleRate), outputBufferSize(outputBufferSize), channelCount(channelCount),
-    subframes(subframes), outputRb(nullptr, 0) {
-        outputBufferBlockCount = (((channelCount * outputBufferSize) << 15) & 0x7C00000) >> 22;
-        outputBuffer = g_memory.MapVirtual(g_userHeap.AllocPhysical((size_t)0x2000, 0));
-
-        codec = avcodec_find_decoder(AV_CODEC_ID_XMAFRAMES);
-        if (!codec) {
-            throw std::runtime_error("Decoder not found");
-        }
-
-        codec_ctx = avcodec_alloc_context3(codec);
-        if (!codec_ctx) {
-            throw std::runtime_error("Failed to allocate codec context");
-        }
-
-        codec_ctx->sample_rate = sampleRate;
-        codec_ctx->ch_layout.nb_channels = channelCount;
-
-        av_frame_ = av_frame_alloc();
-        if (!av_frame_) {
-            throw std::runtime_error("Couldn't allocate frame");
-        }
-
-        if (int err = avcodec_open2(codec_ctx, codec, nullptr); err < 0) {
-            throw std::runtime_error("Failed to open codec");
-        }
-        av_packet_ = av_packet_alloc();
-    }
+    XmaPlayback(uint32_t sampleRate, uint32_t outputBufferSize, uint32_t channelCount, uint32_t subframes);
 
     void Decode();
 
@@ -154,10 +138,6 @@ public:
 
     bool IsInputBufferValid(uint8_t bufferIndex) const {
         return bufferIndex == 0 ? inputBuffer1Valid : inputBuffer2Valid;
-    }
-
-    bool IsCurrentInputBufferValid() const {
-        return IsInputBufferValid(currentBuffer);
     }
 
     bool IsAnyInputBufferValid() const {
@@ -461,7 +441,7 @@ void DecoderThreadFunc(XmaPlayback *playback) {
     }
 }
 
-uint32_t XMAPlaybackCreate(uint32_t streams, XMAPLAYBACKINIT *init,
+uint32_t XMAPlaybackCreate(uint32_t streams, XmaPlaybackInit *init,
                            uint32_t flags, be<uint32_t> *outPlayback) {
     debug_printf("XMAPlaybackCreate: %x %x %x %x\n", streams, init, flags, outPlayback);
     debug_printf("sampleRate: %d\n", init->sampleRate.get());
@@ -751,16 +731,7 @@ uint32_t XMAPlaybackFlushData(XmaPlayback *playback) {
     return 0;
 }
 
-struct XMAPLAYBACKLOOP {
-    be<uint32_t> loopStartOffset;
-    be<uint32_t> loopEndOffset;
-    uint8_t loopSubframeEnd;
-    uint8_t loopSubframeSkip;
-    uint8_t numLoops;
-    uint8_t reserved;
-};
-
-uint32_t XmaPlaybackSetLoop(XmaPlayback *playback, uint32_t streamIndex, XMAPLAYBACKLOOP *loop) {
+uint32_t XmaPlaybackSetLoop(XmaPlayback *playback, uint32_t streamIndex, XmaPlaybackLoop *loop) {
     debug_printf("XmaPlaybackSetLoop %x\n", playback);
     debug_printf("loopStartOffset: %x\n", loop->loopStartOffset.get());
     debug_printf("loopEndOffset: %x\n", loop->loopEndOffset.get());
@@ -826,3 +797,26 @@ uint32_t XMAPlaybackQueryCurrentPosition(XmaPlayback *playback) {
     __builtin_debugtrap();
     return 0;
 }
+
+GUEST_FUNCTION_HOOK(sub_8255C090, XMAPlaybackCreate);
+GUEST_FUNCTION_HOOK(sub_8255CC48, XMAPlaybackRequestModifyLock);
+GUEST_FUNCTION_HOOK(sub_8255CCC8, XMAPlaybackWaitUntilModifyLockObtained);
+GUEST_FUNCTION_HOOK(sub_8255C4D0, XMAPlaybackQueryReadyForMoreData);
+GUEST_FUNCTION_HOOK(sub_8255C520, XMAPlaybackIsIdle);
+GUEST_FUNCTION_HOOK(sub_8255C388, XMAPlaybackQueryContextsAllocated);
+GUEST_FUNCTION_HOOK(sub_8255CF10, XMAPlaybackResumePlayback);
+GUEST_FUNCTION_HOOK(sub_8255C470, XMAPlaybackQueryInputDataPending);
+GUEST_FUNCTION_HOOK(sub_8255C9A0, XMAPlaybackGetErrorBits);
+GUEST_FUNCTION_HOOK(sub_8255C398, XMAPlaybackSubmitData);
+GUEST_FUNCTION_HOOK(sub_8255C578, XMAPlaybackQueryAvailableData);
+GUEST_FUNCTION_HOOK(sub_8255C7A8, XMAPlaybackAccessDecodedData);
+GUEST_FUNCTION_HOOK(sub_8255C5F0, XMAPlaybackConsumeDecodedData);
+GUEST_FUNCTION_HOOK(sub_8255CD90, XMAPlaybackQueryModifyLockObtained);
+GUEST_FUNCTION_HOOK(sub_8255C8D8, XMAPlaybackFlushData);
+GUEST_FUNCTION_HOOK(sub_8255C9D8, XmaPlaybackSetLoop);
+GUEST_FUNCTION_HOOK(sub_8255CA50, XMAPlaybackGetRemainingLoopCount);
+GUEST_FUNCTION_HOOK(sub_8255CA90, XMAPlaybackGetStreamPosition);
+GUEST_FUNCTION_HOOK(sub_8255CB20, XMAPlaybackSetDecodePosition);
+GUEST_FUNCTION_HOOK(sub_8255C850, XMAPlaybackRewindDecodePosition);
+GUEST_FUNCTION_HOOK(sub_8255CAB0, XMAPlaybackQueryCurrentPosition);
+GUEST_FUNCTION_HOOK(sub_8255C2C0, XMAPlaybackDestroy);

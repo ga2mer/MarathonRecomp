@@ -1,5 +1,35 @@
 #include "xma_decoder.h"
 
+XmaPlayback::XmaPlayback(uint32_t sampleRate, uint32_t outputBufferSize, uint32_t channelCount, uint32_t subframes)
+: sampleRate(sampleRate), outputBufferSize(outputBufferSize), channelCount(channelCount),
+subframes(subframes), outputRb(nullptr, 0) {
+    outputBufferBlockCount = (((channelCount * outputBufferSize) << 15) & 0x7C00000) >> 22;
+    outputBuffer = g_memory.MapVirtual(g_userHeap.AllocPhysical((size_t)0x2000, 0));
+
+    codec = avcodec_find_decoder(AV_CODEC_ID_XMAFRAMES);
+    if (!codec) {
+        throw std::runtime_error("Decoder not found");
+    }
+
+    codec_ctx = avcodec_alloc_context3(codec);
+    if (!codec_ctx) {
+        throw std::runtime_error("Failed to allocate codec context");
+    }
+
+    codec_ctx->sample_rate = sampleRate;
+    codec_ctx->ch_layout.nb_channels = channelCount;
+
+    av_frame_ = av_frame_alloc();
+    if (!av_frame_) {
+        throw std::runtime_error("Couldn't allocate frame");
+    }
+
+    if (int err = avcodec_open2(codec_ctx, codec, nullptr); err < 0) {
+        throw std::runtime_error("Failed to open codec");
+    }
+    av_packet_ = av_packet_alloc();
+}
+
 void XmaPlayback::Decode() {
     if (!IsAnyInputBufferValid()) {
         return;
@@ -182,26 +212,3 @@ void XmaPlayback::Decode() {
 
     inputBufferReadOffset = nextInputOffset;
 }
-
-GUEST_FUNCTION_HOOK(sub_8255C090, XMAPlaybackCreate);
-GUEST_FUNCTION_HOOK(sub_8255CC48, XMAPlaybackRequestModifyLock);
-GUEST_FUNCTION_HOOK(sub_8255CCC8, XMAPlaybackWaitUntilModifyLockObtained);
-GUEST_FUNCTION_HOOK(sub_8255C4D0, XMAPlaybackQueryReadyForMoreData);
-GUEST_FUNCTION_HOOK(sub_8255C520, XMAPlaybackIsIdle);
-GUEST_FUNCTION_HOOK(sub_8255C388, XMAPlaybackQueryContextsAllocated);
-GUEST_FUNCTION_HOOK(sub_8255CF10, XMAPlaybackResumePlayback);
-GUEST_FUNCTION_HOOK(sub_8255C470, XMAPlaybackQueryInputDataPending);
-GUEST_FUNCTION_HOOK(sub_8255C9A0, XMAPlaybackGetErrorBits);
-GUEST_FUNCTION_HOOK(sub_8255C398, XMAPlaybackSubmitData);
-GUEST_FUNCTION_HOOK(sub_8255C578, XMAPlaybackQueryAvailableData);
-GUEST_FUNCTION_HOOK(sub_8255C7A8, XMAPlaybackAccessDecodedData);
-GUEST_FUNCTION_HOOK(sub_8255C5F0, XMAPlaybackConsumeDecodedData);
-GUEST_FUNCTION_HOOK(sub_8255CD90, XMAPlaybackQueryModifyLockObtained);
-GUEST_FUNCTION_HOOK(sub_8255C8D8, XMAPlaybackFlushData);
-GUEST_FUNCTION_HOOK(sub_8255C9D8, XmaPlaybackSetLoop);
-GUEST_FUNCTION_HOOK(sub_8255CA50, XMAPlaybackGetRemainingLoopCount);
-GUEST_FUNCTION_HOOK(sub_8255CA90, XMAPlaybackGetStreamPosition);
-GUEST_FUNCTION_HOOK(sub_8255CB20, XMAPlaybackSetDecodePosition);
-GUEST_FUNCTION_HOOK(sub_8255C850, XMAPlaybackRewindDecodePosition);
-GUEST_FUNCTION_HOOK(sub_8255CAB0, XMAPlaybackQueryCurrentPosition);
-GUEST_FUNCTION_HOOK(sub_8255C2C0, XMAPlaybackDestroy);
