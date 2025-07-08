@@ -127,10 +127,15 @@ endif()
 
 set(MARATHON_RECOMP_APU_CXX_SOURCES
     "apu/audio.cpp"
-    "apu/xma_decoder.cpp"
     "apu/embedded_player.cpp"
     "apu/driver/sdl2_driver.cpp"
 )
+
+if (NOT WIN32)
+    list(APPEND MARATHON_RECOMP_APU_CXX_SOURCES
+        "apu/ffmpeg_xma_decoder.cpp"
+    )
+endif()
 
 set(MARATHON_RECOMP_HID_CXX_SOURCES
     "hid/hid.cpp"
