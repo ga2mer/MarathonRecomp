@@ -11,24 +11,24 @@
 
 void RingBuffer::AdvanceRead(size_t _count) {
   ring_size_t count = static_cast<ring_size_t>(_count);
-  if (read_offset_ + count < capacity_) {
-    read_offset_ += count;
+  if (readOffset_ + count < capacity_) {
+    readOffset_ += count;
   } else {
-    ring_size_t left_half = capacity_ - read_offset_;
+    ring_size_t left_half = capacity_ - readOffset_;
     ring_size_t right_half = count - left_half;
-    read_offset_ = right_half;
+    readOffset_ = right_half;
   }
 }
 
 void RingBuffer::AdvanceWrite(size_t _count) {
   ring_size_t count = static_cast<ring_size_t>(_count);
 
-  if (write_offset_ + count < capacity_) {
-    write_offset_ += count;
+  if (writeOffset_ + count < capacity_) {
+    writeOffset_ += count;
   } else {
-    ring_size_t left_half = capacity_ - write_offset_;
+    ring_size_t left_half = capacity_ - writeOffset_;
     ring_size_t right_half = count - left_half;
-    write_offset_ = right_half;
+    writeOffset_ = right_half;
   }
 }
 
@@ -36,12 +36,12 @@ RingBuffer::ReadRange RingBuffer::BeginRead(size_t _count) {
   ring_size_t count =
       std::min<ring_size_t>(static_cast<ring_size_t>(_count), capacity_);
   if (!!(count)) [[likely]] {
-    if (read_offset_ + count < capacity_) {
-      return {buffer_ + read_offset_, nullptr, count, 0};
+    if (readOffset_ + count < capacity_) {
+      return {buffer_ + readOffset_, nullptr, count, 0};
     } else {
-      ring_size_t left_half = capacity_ - read_offset_;
+      ring_size_t left_half = capacity_ - readOffset_;
       ring_size_t right_half = count - left_half;
-      return {buffer_ + read_offset_, buffer_, left_half, right_half};
+      return {buffer_ + readOffset_, buffer_, left_half, right_half};
     }
   } else {
     return {0};
@@ -50,9 +50,9 @@ RingBuffer::ReadRange RingBuffer::BeginRead(size_t _count) {
 
 void RingBuffer::EndRead(ReadRange read_range) {
   if (read_range.second) {
-    read_offset_ = read_range.second_length;
+    readOffset_ = read_range.secondLength;
   } else {
-    read_offset_ += read_range.first_length;
+    readOffset_ += read_range.firstLength;
   }
 }
 
@@ -64,23 +64,23 @@ size_t RingBuffer::Read(uint8_t *buffer, size_t _count) {
   }
 
   // Sanity check: Make sure we don't read over the write offset.
-  if (read_offset_ < write_offset_) {
+  if (readOffset_ < writeOffset_) {
     assert(read_offset_ + count <= write_offset_);
-  } else if (read_offset_ + count >= capacity_) {
-    __attribute__((unused)) ring_size_t left_half = capacity_ - read_offset_;
+  } else if (readOffset_ + count >= capacity_) {
+    __attribute__((unused)) ring_size_t left_half = capacity_ - readOffset_;
 
     assert(count - left_half <= write_offset_);
   }
 
-  if (read_offset_ + count < capacity_) {
-    std::memcpy(buffer, buffer_ + read_offset_, count);
-    read_offset_ += count;
+  if (readOffset_ + count < capacity_) {
+    std::memcpy(buffer, buffer_ + readOffset_, count);
+    readOffset_ += count;
   } else {
-    ring_size_t left_half = capacity_ - read_offset_;
+    ring_size_t left_half = capacity_ - readOffset_;
     ring_size_t right_half = count - left_half;
-    std::memcpy(buffer, buffer_ + read_offset_, left_half);
+    std::memcpy(buffer, buffer_ + readOffset_, left_half);
     std::memcpy(buffer + left_half, buffer_, right_half);
-    read_offset_ = right_half;
+    readOffset_ = right_half;
   }
 
   return count;
@@ -94,22 +94,22 @@ size_t RingBuffer::Write(const uint8_t *buffer, size_t _count) {
   }
 
   // Sanity check: Make sure we don't write over the read offset.
-  if (write_offset_ < read_offset_) {
+  if (writeOffset_ < readOffset_) {
     assert(write_offset_ + count <= read_offset_);
-  } else if (write_offset_ + count >= capacity_) {
-    __attribute__((unused)) size_t left_half = capacity_ - write_offset_;
+  } else if (writeOffset_ + count >= capacity_) {
+    __attribute__((unused)) size_t left_half = capacity_ - writeOffset_;
     assert(count - left_half <= read_offset_);
   }
 
-  if (write_offset_ + count < capacity_) {
-    std::memcpy(buffer_ + write_offset_, buffer, count);
-    write_offset_ += count;
+  if (writeOffset_ + count < capacity_) {
+    std::memcpy(buffer_ + writeOffset_, buffer, count);
+    writeOffset_ += count;
   } else {
-    ring_size_t left_half = capacity_ - write_offset_;
+    ring_size_t left_half = capacity_ - writeOffset_;
     ring_size_t right_half = count - left_half;
-    std::memcpy(buffer_ + write_offset_, buffer, left_half);
+    std::memcpy(buffer_ + writeOffset_, buffer, left_half);
     std::memcpy(buffer_, buffer + left_half, right_half);
-    write_offset_ = right_half;
+    writeOffset_ = right_half;
   }
 
   return count;
