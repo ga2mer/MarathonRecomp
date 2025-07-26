@@ -887,6 +887,7 @@ struct RenderCommand
             GuestDevice* device;
             uint32_t flags;
             GuestTexture* texture;
+            uint32_t destSliceOrFace;
         } stretchRect;
 
         struct 
@@ -3196,6 +3197,7 @@ static GuestTexture* CreateTexture(uint32_t width, uint32_t height, uint32_t dep
     texture->height = height;
     texture->depth = depth;
     texture->format = desc.format;
+    texture->mipLevels = viewDesc.mipLevels;
     texture->viewDimension = viewDesc.dimension;
     texture->descriptorIndex = g_textureDescriptorAllocator.allocate();
 
@@ -3332,13 +3334,14 @@ static void FlushViewport()
     }
 }
 
-static void StretchRect(GuestDevice* device, uint32_t flags, uint32_t, GuestTexture* texture)
+static void StretchRect(GuestDevice* device, uint32_t flags, uint32_t, GuestTexture* texture, uint32_t, uint32_t, uint32_t destSliceOrFace)
 {
     // printf("StretchRect %x\n", texture);
     RenderCommand cmd;
     cmd.type = RenderCommandType::StretchRect;
     cmd.stretchRect.flags = flags;
     cmd.stretchRect.texture = texture;
+    cmd.stretchRect.destSliceOrFace = destSliceOrFace;
     g_renderQueue.enqueue(cmd);
 }
 
@@ -3358,7 +3361,7 @@ static void ProcStretchRect(const RenderCommand& cmd)
 
     args.texture->sourceSurface = surface;
     // printf("ProcStretchRect: surface - %x %x ? (%x : %x)\n", surface, isDepthStencil, g_depthStencil, g_renderTarget);
-    surface->destinationTextures.emplace(args.texture);
+    surface->destinationTextures.emplace(args.texture, args.destSliceOrFace);
 
     // If the texture is assigned to any slots, set it again. This'll also push the barrier.
     for (uint32_t i = 0; i < std::size(g_textures); i++)
@@ -3484,7 +3487,7 @@ static bool PopulateBarriersForStretchRect(GuestSurface* renderTarget, GuestSurf
 
             AddBarrier(surface, srcLayout);
 
-            for (const auto texture : surface->destinationTextures)
+            for (const auto [texture, _] : surface->destinationTextures)
                 AddBarrier(texture, dstLayout);
 
             addedAny = true;
@@ -3505,7 +3508,7 @@ static void ExecutePendingStretchRectCommands(GuestSurface* renderTarget, GuestS
             const bool multiSampling = surface->sampleCount != RenderSampleCount::COUNT_1;
             const bool isDepthStencil = RenderFormatIsDepth(surface->format);
 
-            for (const auto texture : surface->destinationTextures)
+            for (const auto [texture, slice] : surface->destinationTextures)
             {
                 bool shaderResolve = true;
 
@@ -3595,27 +3598,36 @@ static void ExecutePendingStretchRectCommands(GuestSurface* renderTarget, GuestS
                         }
                     }
 
-                    if (texture->framebuffer == nullptr)
+                    auto& framebuffer = texture->framebuffers[slice];
+                    if (framebuffer == nullptr)
                     {
                         if (isDepthStencil)
                         {
+                            RenderTextureViewDesc viewDesc;
+                            viewDesc.format = texture->format;
+                            viewDesc.dimension = texture->viewDimension;
+                            viewDesc.mipLevels = texture->mipLevels;
+                            viewDesc.arrayIndex = slice;
+                            viewDesc.arraySize = 1;
+                            auto& view = texture->framebufferViews.emplace_back(texture->texture->createTextureView(viewDesc));
+
                             RenderFramebufferDesc desc;
-                            desc.depthAttachment = texture->texture;
-                            texture->framebuffer = g_device->createFramebuffer(desc);
+                            desc.depthAttachmentView = view.get();
+                            framebuffer = g_device->createFramebuffer(desc);
                         }
                         else
                         {
                             RenderFramebufferDesc desc;
                             desc.colorAttachments = const_cast<const RenderTexture**>(&texture->texture);
                             desc.colorAttachmentsCount = 1;
-                            texture->framebuffer = g_device->createFramebuffer(desc);
+                            framebuffer = g_device->createFramebuffer(desc);
                         }
                     }
 
-                    if (g_framebuffer != texture->framebuffer.get())
+                    if (g_framebuffer != framebuffer.get())
                     {
-                        commandList->setFramebuffer(texture->framebuffer.get());
-                        g_framebuffer = texture->framebuffer.get();
+                        commandList->setFramebuffer(framebuffer.get());
+                        g_framebuffer = framebuffer.get();
                     }
 
                     commandList->setPipeline(pipeline);
@@ -3671,7 +3683,7 @@ static void ProcExecutePendingStretchRectCommands(const RenderCommand& cmd)
             if (!RenderFormatIsDepth(surface->format))
                 ExecutePendingStretchRectCommands(surface, nullptr);
 
-            for (const auto texture : surface->destinationTextures)
+            for (const auto [texture, _] : surface->destinationTextures)
                 texture->sourceSurface = nullptr;
 
             surface->destinationTextures.clear();
@@ -5911,6 +5923,7 @@ static bool LoadTexture(GuestTexture& texture, const uint8_t* data, size_t dataS
 
         texture.width = ddsDesc.width;
         texture.height = ddsDesc.height;
+        texture.mipLevels = viewDesc.mipLevels;
         texture.viewDimension = viewDesc.dimension;
 
         struct Slice
@@ -8236,7 +8249,7 @@ int D3DDevice_EndTiling(GuestDevice* device, uint32_t flags, Rect* pResolveRects
     //     printf("pResolveParams: %x %x %x\n", resolveParams->format.get(), resolveParams->unk.get(), resolveParams->format2.get());
     // }
     if (pDestTexture) {
-        StretchRect(device, flags, 0, pDestTexture);
+        StretchRect(device, flags, 0, pDestTexture, 0, 0, 0);
     }
     return 0;
 }
