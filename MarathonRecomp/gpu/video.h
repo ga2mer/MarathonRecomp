@@ -4,7 +4,7 @@
 /////////////////////////////////////////////////////////////////////#define PSO_CACHING
 //#define PSO_CACHING_CLEANUP
 
-#include "rhi/plume_render_interface.h"
+#include <plume_render_interface.h>
 #include <os/logger.h>
 #include <cstdint>
 

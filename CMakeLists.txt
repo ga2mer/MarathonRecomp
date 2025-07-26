@@ -19,6 +19,10 @@ set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
 project("MarathonRecomp-ALL")
 
+if (APPLE)
+    enable_language(OBJC OBJCXX)
+endif()
+
 if (CMAKE_OSX_ARCHITECTURES)
     set(MARATHON_RECOMP_ARCHITECTURE ${CMAKE_OSX_ARCHITECTURES})
 elseif(CMAKE_SYSTEM_PROCESSOR)

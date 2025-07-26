@@ -3,7 +3,6 @@
 #include "imgui/imgui_common.h"
 #include "imgui/imgui_snapshot.h"
 #include "imgui/imgui_font_builder.h"
-#include "rhi/plume_render_interface_types.h"
 
 #include <app.h>
 #include <bc_diff.h>
@@ -16,6 +15,7 @@
 #include <hid/hid.h>
 #include <kernel/memory.h>
 #include <kernel/xdbf.h>
+#include <plume_render_interface.h>
 #include <res/bc_diff/button_bc_diff.bin.h>
 #include <res/font/im_font_atlas.dds.h>
 #include <shader/shader_cache.h>
@@ -118,6 +118,8 @@ namespace plume
 #endif
     }
 }
+
+using namespace plume;
 
 #pragma pack(push, 1)
 struct PipelineState
@@ -1862,7 +1864,7 @@ bool Video::CreateHostDevice(const char *sdlVideoDriver)
     g_queue = g_device->createCommandQueue(RenderCommandListType::DIRECT);
 
     for (auto& commandList : g_commandLists)
-        commandList = g_device->createCommandList(RenderCommandListType::DIRECT);
+        commandList = g_queue->createCommandList();
 
     for (auto& commandFence : g_commandFences)
         commandFence = g_device->createCommandFence();
@@ -1871,7 +1873,7 @@ bool Video::CreateHostDevice(const char *sdlVideoDriver)
         queryPool = g_device->createQueryPool(NUM_QUERIES);
 
     g_copyQueue = g_device->createCommandQueue(RenderCommandListType::COPY);
-    g_copyCommandList = g_device->createCommandList(RenderCommandListType::COPY);
+    g_copyCommandList = g_copyQueue->createCommandList();
     g_copyCommandFence = g_device->createCommandFence();
 
     uint32_t bufferCount = 2;
@@ -2096,23 +2098,21 @@ void Video::WaitForGPU()
 {
     g_waitForGPUCount++;
 
-    if (g_vulkan)
+    // Wait for all queued frames to finish.
+    for (size_t i = 0; i < NUM_FRAMES; i++)
     {
-        g_device->waitIdle();
-    }
-    else 
-    {
-        for (size_t i = 0; i < NUM_FRAMES; i++)
+        if (g_commandListStates[i])
         {
-            if (g_commandListStates[i])
-            {
-                g_queue->waitForCommandFence(g_commandFences[i].get());
-                g_commandListStates[i] = false;
-            }
+            g_queue->waitForCommandFence(g_commandFences[i].get());
+            g_commandListStates[i] = false;
         }
-        g_queue->executeCommandLists(nullptr, g_commandFences[0].get());
-        g_queue->waitForCommandFence(g_commandFences[0].get());
     }
+
+    // Execute an empty command list and wait for it to end to guarantee that any remaining presentation has finished.
+    g_commandLists[0]->begin();
+    g_commandLists[0]->end();
+    g_queue->executeCommandLists(g_commandLists[0].get(), g_commandFences[0].get());
+    g_queue->waitForCommandFence(g_commandFences[0].get());
 }
 
 static uint32_t getSetAddress(uint32_t base, int index) {
@@ -5984,7 +5984,7 @@ static bool LoadTexture(GuestTexture& texture, const uint8_t* data, size_t dataS
                     auto& slice = slices[i];
 
                     g_copyCommandList->copyTextureRegion(
-                        RenderTextureCopyLocation::Subresource(texture.texture, i),
+                        RenderTextureCopyLocation::Subresource(texture.texture, i % desc.mipLevels, i / desc.mipLevels),
                         RenderTextureCopyLocation::PlacedFootprint(uploadBuffer.get(), desc.format, slice.width, slice.height, slice.depth, (slice.dstRowPitch * 8) / ddsDesc.bitsPerPixelOrBlock * ddsDesc.blockWidth, slice.dstOffset));
                 }
             });

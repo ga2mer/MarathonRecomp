@@ -1,7 +1,7 @@
 project("MarathonRecomp")
 
 if (WIN32)
-    option(MARATHON_RECOMP_D3D12 "Add D3D12 support for rendering" OFF)
+    option(MARATHON_RECOMP_D3D12 "Add D3D12 support for rendering" ON)
 endif()
 
 if (CMAKE_SYSTEM_NAME MATCHES "Linux")
@@ -116,14 +116,7 @@ set(MARATHON_RECOMP_GPU_CXX_SOURCES
     "gpu/imgui/imgui_common.cpp"
     "gpu/imgui/imgui_font_builder.cpp"
     "gpu/imgui/imgui_snapshot.cpp"
-    "gpu/rhi/plume_vulkan.cpp"
 )
-
-if (MARATHON_RECOMP_D3D12)
-    list(APPEND MARATHON_RECOMP_GPU_CXX_SOURCES
-        "gpu/rhi/plume_d3d12.cpp"
-    )
-endif()
 
 set(MARATHON_RECOMP_APU_CXX_SOURCES
     "apu/audio.cpp"
@@ -225,17 +218,9 @@ set(MARATHON_RECOMP_THIRDPARTY_INCLUDES
     "${MARATHON_RECOMP_THIRDPARTY_ROOT}/magic_enum/include"
     "${MARATHON_RECOMP_THIRDPARTY_ROOT}/stb"
     "${MARATHON_RECOMP_THIRDPARTY_ROOT}/unordered_dense/include"
-    "${MARATHON_RECOMP_THIRDPARTY_ROOT}/volk"
-    "${MARATHON_RECOMP_THIRDPARTY_ROOT}/Vulkan-Headers/include"
-    "${MARATHON_RECOMP_THIRDPARTY_ROOT}/VulkanMemoryAllocator/include"
     "${MARATHON_RECOMP_TOOLS_ROOT}/bc_diff"
     "${MARATHON_RECOMP_TOOLS_ROOT}/XenosRecomp/thirdparty/smol-v/source"
 )
-
-if (MARATHON_RECOMP_D3D12)
-    list(APPEND MARATHON_RECOMP_THIRDPARTY_INCLUDES "${MARATHON_RECOMP_THIRDPARTY_ROOT}/D3D12MemoryAllocator/include")
-    list(APPEND MARATHON_RECOMP_THIRDPARTY_SOURCES "${MARATHON_RECOMP_THIRDPARTY_ROOT}/D3D12MemoryAllocator/src/D3D12MemAlloc.cpp")
-endif()
 
 set_source_files_properties(${MARATHON_RECOMP_THIRDPARTY_SOURCES} PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
 
@@ -381,31 +366,27 @@ if (CMAKE_SYSTEM_NAME MATCHES "Linux")
     target_compile_definitions(MarathonRecomp PRIVATE SDL_VULKAN_ENABLED)
 endif()
 
-#find_package(directx-dxc REQUIRED)
 find_package(CURL REQUIRED)
 
-#if (MARATHON_RECOMP_D3D12)
-#    file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/D3D12)
-#    add_custom_command(TARGET MarathonRecomp POST_BUILD
-#        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_PROPERTY:Microsoft::DirectX12-Core,IMPORTED_LOCATION_RELEASE> ${CMAKE_CURRENT_BINARY_DIR}/D3D12
-#        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_PROPERTY:Microsoft::DirectX12-Layers,IMPORTED_LOCATION_DEBUG> ${CMAKE_CURRENT_BINARY_DIR}/D3D12
-#       COMMAND_EXPAND_LISTS
-#    )
-#    
-#    find_file(DIRECTX_DXIL_LIBRARY "dxil.dll")
-#    file(COPY ${DIRECTX_DXIL_LIBRARY} DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
-#
-#    target_link_libraries(MarathonRecomp PRIVATE
-#        Microsoft::DirectX-Headers 
-#        Microsoft::DirectX-Guids 
-#        Microsoft::DirectX12-Agility
-#        Microsoft::DirectXShaderCompiler
-#        Microsoft::DXIL
-#        dxgi
-#    )
-#endif()
+if (MARATHON_RECOMP_D3D12)
+    file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/D3D12)
+    add_custom_command(TARGET MarathonRecomp POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_PROPERTY:Microsoft::DirectX12-Core,IMPORTED_LOCATION_RELEASE> $<TARGET_FILE_DIR:MarathonRecomp>/D3D12
+            COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_PROPERTY:Microsoft::DirectX12-Layers,IMPORTED_LOCATION_DEBUG> $<TARGET_FILE_DIR:MarathonRecomp>/D3D12
+            COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_PROPERTY:Microsoft::DirectXShaderCompiler,IMPORTED_LOCATION> $<TARGET_FILE_DIR:MarathonRecomp>
+            COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_PROPERTY:Microsoft::DXIL,IMPORTED_LOCATION> $<TARGET_FILE_DIR:MarathonRecomp>
+            COMMAND_EXPAND_LISTS
+    )
 
-#file(CHMOD ${DIRECTX_DXC_TOOL} PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE)
+    target_link_libraries(MarathonRecomp PRIVATE
+            Microsoft::DirectX-Headers
+            Microsoft::DirectX-Guids
+            Microsoft::DirectX12-Agility
+            Microsoft::DirectXShaderCompiler
+            Microsoft::DXIL
+            dxgi
+    )
+endif()
 
 if (WIN32)
     target_link_libraries(MarathonRecomp PRIVATE
@@ -432,6 +413,7 @@ target_link_libraries(MarathonRecomp PRIVATE
     MarathonRecompLib
     xxHash::xxhash
     CURL::libcurl
+    plume
 )
 
 if (NOT WIN32)
