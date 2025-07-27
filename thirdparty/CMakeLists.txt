@@ -18,6 +18,7 @@ set(SDL2MIXER_WAVPACK OFF)
 add_subdirectory("${MARATHON_RECOMP_THIRDPARTY_ROOT}/msdf-atlas-gen")
 add_subdirectory("${MARATHON_RECOMP_THIRDPARTY_ROOT}/nativefiledialog-extended")
 add_subdirectory("${MARATHON_RECOMP_THIRDPARTY_ROOT}/o1heap")
+add_subdirectory("${MARATHON_RECOMP_THIRDPARTY_ROOT}/plume")
 add_subdirectory("${MARATHON_RECOMP_THIRDPARTY_ROOT}/SDL")
 add_subdirectory("${MARATHON_RECOMP_THIRDPARTY_ROOT}/SDL_mixer")
 
