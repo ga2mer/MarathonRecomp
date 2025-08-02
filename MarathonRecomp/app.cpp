@@ -173,3 +173,43 @@ PPC_FUNC(sub_825822D0)
     __imp__sub_825822D0(ctx, base);
 }
 #endif
+
+PPC_FUNC_IMPL(__imp__sub_82590C38);
+PPC_FUNC(sub_82590C38)
+{
+    auto pCamera = (Sonicteam::SoX::Scenery::CameraImp*)(base + ctx.r3.u32);
+    float pFar = ctx.f1.f64;
+    pCamera->m_Far = pFar;
+    printf("pCamera[%s] pFar = %f\n", pCamera->m_CamName.c_str(), pFar); 
+    pCamera->m_Far = 12800000;
+    GuestToHostFunction<void>(sub_82590A28,ctx.r3.u32,pFar);
+    return;
+}
+
+//821728D4 (secondary)
+//SceneLODParam::InitializeSceneParam
+PPC_FUNC_IMPL(__imp__sub_825F3FE0);
+PPC_FUNC(sub_825F3FE0)
+{
+    auto pSceneLOD = (Sonicteam::SceneLODParam*)(base + ctx.r3.u32);
+    __imp__sub_825F3FE0(ctx, base);
+    auto& lMain = pSceneLOD->m_LODParam[Sonicteam::SceneLODParam::Main];
+    for (int i = 0; i < 19; i++) 
+    {
+        pSceneLOD->m_LODParam[i].m_IsSet = 1;
+        pSceneLOD->m_LODParam[i].m_FarDistance = 12800000;
+        pSceneLOD->m_LODParam[i].m_ClipDistance = 12800000;
+        pSceneLOD->m_LODParam[i].m_TerrainClipDistance = 12800000;
+
+    }
+    return;
+}
+
+//SceneShadowMapParam::InitializeSceneParam
+PPC_FUNC_IMPL(__imp__sub_825F5DA8);
+PPC_FUNC(sub_825F5DA8)
+{
+    auto pSceneLOD = (Sonicteam::SceneShadowMapParam*)(base + ctx.r3.u32);
+    __imp__sub_825F5DA8(ctx, base);
+    auto pParamMarathon = (Sonicteam::SceneShadowMapParam::ShadowMapParam*)(base + 0x82B84B30);
+}
