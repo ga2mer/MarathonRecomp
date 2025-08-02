@@ -11,7 +11,7 @@ namespace Sonicteam
         {
             be<uint32_t> ActorID;
             be<uint32_t> RingCount;
-            MARATHON_INSERT_PADDING(4);
+            be<uint32_t> TownRingCount;
             be<uint32_t> LifeCount;
             be<uint32_t> ScoreCount;
             be<float> AliveTime;

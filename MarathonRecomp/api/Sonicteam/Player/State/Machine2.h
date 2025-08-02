@@ -4,6 +4,7 @@
 #include <Sonicteam/Player/State/IContext.h>
 #include <Sonicteam/Player/State/IMachine.h>
 #include <Sonicteam/SoX/AI/StateMachine.h>
+#include <Sonicteam/Player/State/IContext.h>
 
 namespace Sonicteam::Player::State
 {
